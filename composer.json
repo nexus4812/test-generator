@@ -11,6 +11,11 @@
             "Nexus4812\\TestGenerator\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Nexus4812\\TestGenerator\\": "tests/"
+        }
+    },
     "config": {
         "allow-plugins": {
             "php-http/discovery": true
