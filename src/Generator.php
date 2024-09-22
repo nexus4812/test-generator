@@ -46,11 +46,16 @@ class Generator
 
         $result = $this->unitExecutor->executeTest($path);
 
+        var_dump("First result : $result");
+
         if (is_string($result)) {
+            var_dump("Execute Retry");
             $testCode = $this->gptClient->regenerateTest($code, $result);
             $path = $this->fileSystem->saveTestToFile($testCode, $className);
             $result = $this->unitExecutor->executeTest($path);
         }
+
+        var_dump($result);
     }
 }
 

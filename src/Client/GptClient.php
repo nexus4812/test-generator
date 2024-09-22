@@ -6,6 +6,8 @@ use OpenAI\Client;
 
 readonly class GptClient
 {
+    private const MODEL = 'gpt-4-turbo';
+
     private const SYSTEM_MESSAGE = [
         'role' => 'system',
         'content' =>
@@ -25,7 +27,7 @@ readonly class GptClient
     {
         // ChatGPTにPHPコードに基づいたテストケース生成を依頼
         $response = $this->client->chat()->create([
-            'model' => 'gpt-3.5-turbo', // 最新のChatGPTモデルを利用
+            'model' => self::MODEL,
             'messages' => [
                 self::SYSTEM_MESSAGE,
                 ['role' => 'user', 'content' => "Here is a PHP code snippet. Please generate a PHPUnit test that covers all possible branches and ensures 100% coverage:\n\n$phpCode"]
@@ -40,7 +42,7 @@ readonly class GptClient
     {
         // ChatGPTにエラーレポートを基に再生成を依頼
         $response = $this->client->chat()->create([
-            'model' => 'gpt-3.5-turbo',
+            'model' => self::MODEL,
             'messages' => [
                 self::SYSTEM_MESSAGE,
                 ['role' => 'user', 'content' => "The following PHPUnit test failed. Here is the original PHP code:\n\n$phpCode\n\nHere is the PHPUnit error report:\n\n$errorReport\n\nPlease regenerate the PHPUnit test with corrections to cover all branches and ensure 100% coverage."]
