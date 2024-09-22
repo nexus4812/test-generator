@@ -29,4 +29,9 @@ class Path
         $reflection = new ReflectionClass(\Composer\Autoload\ClassLoader::class);
         return dirname($reflection->getFileName(), 3);
     }
+
+    public static function nameSpaceToPath(string $namespace): string
+    {
+        return str_replace('\\', '/', $namespace);
+    }
 }
