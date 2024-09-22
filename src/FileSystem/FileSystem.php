@@ -11,7 +11,7 @@ readonly class FileSystem
         $this->projectRoot = $projectRoot ?? Path::getProjectRootPath();
     }
 
-    public function saveTestToFile(string $testCode, string $className): void
+    public function saveTestToFile(string $testCode, string $className): string
     {
         [$path, $namespace]  = $this->getAutoloadDevSettingByClassName($className);
 
@@ -26,6 +26,8 @@ readonly class FileSystem
 
         // テストコードをファイルに書き込む
         file_put_contents($testFilePath, $testCode);
+
+        return $testFilePath;
     }
 
     public function getCodeByClass(string $className): string

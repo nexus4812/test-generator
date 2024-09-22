@@ -42,9 +42,18 @@ class Generator
             throw new \RuntimeException("Test code is broken that chat gpt generated >> " . $testCode);
         }
 
-        $this->fileSystem->saveTestToFile($testCode, $className);
+        $path = $this->fileSystem->saveTestToFile($testCode, $className);
 
-        var_dump($this->unitExecutor->executeTest($className));
+        $result = $this->unitExecutor->executeTest($path);
+
+        if (is_string($result)) {
+            var_dump("execute retry");
+            $testCode = $this->gptClient->regenerateTest($code, $result);
+            $path = $this->fileSystem->saveTestToFile($testCode, $className);
+            $result = $this->unitExecutor->executeTest($path);
+
+            var_dump($result);
+        }
     }
 }
 
