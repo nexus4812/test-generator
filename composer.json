@@ -22,6 +22,9 @@
             "php-http/discovery": true
         }
     },
+    "bin": [
+        "nexus-test-generator.php"
+    ],
     "require-dev": {
         "mockery/mockery": "^1.6"
     }

@@ -13,6 +13,7 @@ readonly class GptClient
             'Generate PHPUnit test cases for the provided PHP code. ' .
             'Return only valid PHP code in plain text, without any markdown or code block formatting. ' .
             'The namespace of the test code must match the provided PHP code' .
+            'Use Mockery when using Mock.' .
             'The output must always start with `<?php` '
     ];
 
