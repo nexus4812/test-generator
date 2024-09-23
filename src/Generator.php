@@ -32,6 +32,7 @@ class Generator
     {
         $code = $this->fileSystem->getCodeByClass($className);
 
+        // php -lのオプションを利用して、PHPの文法エラーになっていないか検証する
         if (!$this->linter->lintPHPCode($code)) {
             throw new \InvalidArgumentException($className . ' is broken code');
         }
@@ -42,20 +43,31 @@ class Generator
             throw new \RuntimeException("Test code is broken that chat gpt generated >> " . $testCode);
         }
 
+        // ファイルをtests配下に保存して、PHPUnitを実行する
         $path = $this->fileSystem->saveTestToFile($testCode, $className);
-
         $result = $this->unitExecutor->executeTest($path);
 
-        var_dump("First result : $result");
-
         if (is_string($result)) {
-            var_dump("Execute Retry");
-            $testCode = $this->gptClient->regenerateTest($code, $result);
-            $path = $this->fileSystem->saveTestToFile($testCode, $className);
-            $result = $this->unitExecutor->executeTest($path);
+            $this->generate($result, $className, 3);
+        }
+    }
+
+    private function retryGenerate(string $result, string $className, int $numOfMaxRetry = 0): string|true
+    {
+        $code = $this->fileSystem->getCodeByClass($className);
+        $testCode = $this->gptClient->regenerateTest($code, $result);
+        $path = $this->fileSystem->saveTestToFile($testCode, $className);
+        $result = $this->unitExecutor->executeTest($path);
+        if ($result === true) {
+            var_dump("retry is success");
+            return true;
         }
 
-        var_dump($result);
+        if (0 >= $numOfMaxRetry) {
+            return $result;
+        }
+
+        return $this->retryGenerate($result, $className, $numOfMaxRetry - 1);
     }
 }
 
