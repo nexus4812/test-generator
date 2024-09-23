@@ -19,7 +19,10 @@ readonly class GptClient
             'The output must always start with `<?php` '
     ];
 
-    public function __construct(private Client $client)
+    public function __construct(
+        private Client $client,
+        private PricingCalculator $pricingCalculator
+    )
     {
     }
 
@@ -35,20 +38,36 @@ readonly class GptClient
             'max_tokens' => 1000, // 十分な長さのテストコードを生成するためにトークン数を設定
         ]);
 
+        $this->pricingCalculator->addTokens(
+            self::MODEL,
+            $response['usage']['prompt_tokens'],
+            $response['usage']['completion_tokens'],
+        );
+
+        var_dump('total cost' . $this->pricingCalculator->calculateTotalCost());
+
         return $response['choices'][0]['message']['content'];
     }
 
-    public function regenerateTest(string $phpCode, string $errorReport): string
+    public function regenerateTest(string $phpCode, string $unitTestCode, string $errorReport): string
     {
         // ChatGPTにエラーレポートを基に再生成を依頼
         $response = $this->client->chat()->create([
             'model' => self::MODEL,
             'messages' => [
                 self::SYSTEM_MESSAGE,
-                ['role' => 'user', 'content' => "The following PHPUnit test failed. Here is the original PHP code:\n\n$phpCode\n\nHere is the PHPUnit error report:\n\n$errorReport\n\nPlease regenerate the PHPUnit test with corrections to cover all branches and ensure 100% coverage."]
+                ['role' => 'user', 'content' => "The following PHPUnit test failed. Here is the original PHP code:\n\n$phpCode\n\n, Here is the PHPUnit test code: \n\n$unitTestCode\n\n Here is the PHPUnit error report:\n\n$errorReport\n\nPlease regenerate the PHPUnit test with corrections to cover all branches and ensure 100% coverage."]
             ],
             'max_tokens' => 1000,
         ]);
+
+        $this->pricingCalculator->addTokens(
+            self::MODEL,
+            $response['usage']['prompt_tokens'],
+            $response['usage']['completion_tokens'],
+        );
+
+        var_dump('total cost' . $this->pricingCalculator->calculateTotalCost());
 
         return $response['choices'][0]['message']['content'];
     }

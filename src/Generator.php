@@ -3,6 +3,7 @@
 namespace Nexus4812\TestGenerator;
 
 use Nexus4812\TestGenerator\Client\GptClient;
+use Nexus4812\TestGenerator\Client\PricingCalculator;
 use Nexus4812\TestGenerator\Executor\PHPUnitExecutor;
 use Nexus4812\TestGenerator\FileSystem\FileSystem;
 use Nexus4812\TestGenerator\Linter\PHPLinter;
@@ -21,14 +22,16 @@ class Generator
     public static function create(string $chatGptToken): self
     {
         return new static(
-            new GptClient(\OpenAI::client($chatGptToken)),
+            new GptClient(\OpenAI::client($chatGptToken), new PricingCalculator()),
             new PHPUnitExecutor(),
             new FileSystem(),
             new PHPLinter(),
         );
     }
 
-    public function generate(string $className): void
+    public function generate(
+        string $className
+    ): void
     {
         $code = $this->fileSystem->getCodeByClass($className);
 
@@ -48,15 +51,16 @@ class Generator
         $result = $this->unitExecutor->executeTest($path);
 
         if (is_string($result)) {
-            $this->generate($result, $className, 3);
+            $this->retryGenerate($result, $className, 3);
         }
     }
 
-    private function retryGenerate(string $result, string $className, int $numOfMaxRetry = 0): string|true
+    private function retryGenerate(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true
     {
         $code = $this->fileSystem->getCodeByClass($className);
-        $testCode = $this->gptClient->regenerateTest($code, $result);
-        $path = $this->fileSystem->saveTestToFile($testCode, $className);
+        $testCode = $this->fileSystem->getCodeByClass($className . 'Test');
+        $generateTestCode = $this->gptClient->regenerateTest($code, $testCode, $errorReport);
+        $path = $this->fileSystem->saveTestToFile($generateTestCode, $className);
         $result = $this->unitExecutor->executeTest($path);
         if ($result === true) {
             var_dump("retry is success");
