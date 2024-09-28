@@ -5,6 +5,7 @@ namespace Nexus4812\TestGenerator;
 use Nexus4812\TestGenerator\Client\GptClient;
 use Nexus4812\TestGenerator\Client\PricingCalculator;
 use Nexus4812\TestGenerator\Executor\PHPUnitExecutor;
+use Nexus4812\TestGenerator\FileSystem\FileLogger;
 use Nexus4812\TestGenerator\FileSystem\FileSystem;
 use Nexus4812\TestGenerator\Linter\PHPLinter;
 
@@ -22,7 +23,7 @@ class Generator
     public static function create(string $chatGptToken): self
     {
         return new static(
-            new GptClient(\OpenAI::client($chatGptToken), new PricingCalculator()),
+            new GptClient(\OpenAI::client($chatGptToken), new PricingCalculator(), new FileLogger(null)),
             new PHPUnitExecutor(),
             new FileSystem(),
             new PHPLinter(),
@@ -51,8 +52,33 @@ class Generator
         $result = $this->unitExecutor->executeTest($path);
 
         if (is_string($result)) {
-            $this->retryGenerate($result, $className, 3);
+            var_dump("execute retry");
+            $this->retryGenerate($result, $className, 2);
         }
+
+        if (is_string($result)) {
+            var_dump("execute reduce failed test");
+            $this->retryReduceTest($result, $className, 2);
+        }
+    }
+
+    private function retryReduceTest(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true
+    {
+        $code = $this->fileSystem->getCodeByClass($className);
+        $testCode = $this->fileSystem->getCodeByClass($className . 'Test');
+        $generateTestCode = $this->gptClient->reduceFailedTest($code, $testCode, $errorReport);
+        $path = $this->fileSystem->saveTestToFile($generateTestCode, $className);
+        $result = $this->unitExecutor->executeTest($path);
+        if ($result === true) {
+            var_dump("reduce retry is success");
+            return true;
+        }
+
+        if (0 >= $numOfMaxRetry) {
+            return $result;
+        }
+
+        return $this->retryReduceTest($result, $className, $numOfMaxRetry - 1);
     }
 
     private function retryGenerate(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true

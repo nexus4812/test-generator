@@ -16,55 +16,23 @@ class PricingCalculator
         ],
     ];
 
-    // 保持するトークン数とモデルのリスト
-    protected array $tokenRecords = [];
-
     /**
      * モデルとトークン数（入力と出力）を追加
      *
      * @param string $modelName
      * @param int $inputTokens
      * @param int $outputTokens
+     * @return float
      */
-    public function addTokens(string $modelName, int $inputTokens, int $outputTokens): void
+    public function calculateCost(string $modelName, int $inputTokens, int $outputTokens): float
     {
         if (!isset(self::PRICING[$modelName])) {
             throw new \InvalidArgumentException("Model $modelName is not supported.");
         }
 
-        // モデルごとのトークン数と料金を計算
-        $this->tokenRecords[] = [
-            'model' => $modelName,
-            'inputTokens' => $inputTokens,
-            'outputTokens' => $outputTokens,
-            'inputCost' => ($inputTokens / 1000000) * self::PRICING[$modelName]['input'],
-            'outputCost' => ($outputTokens / 1000000) * self::PRICING[$modelName]['output']
-        ];
-    }
+        $input = ($inputTokens / 1000000) * self::PRICING[$modelName]['input'];
+        $output = ($outputTokens / 1000000) * self::PRICING[$modelName]['output'];
 
-    /**
-     * 合計金額を計算
-     *
-     * @return float
-     */
-    public function calculateTotalCost(): float
-    {
-        $totalCost = 0.0;
-
-        foreach ($this->tokenRecords as $record) {
-            $totalCost += $record['inputCost'] + $record['outputCost'];
-        }
-
-        return round($totalCost, 4); // 小数点以下4桁で丸める
-    }
-
-    /**
-     * 追加されたトークン数と料金の一覧を取得
-     *
-     * @return array
-     */
-    public function getTokenRecords(): array
-    {
-        return $this->tokenRecords;
+        return round($input + $output, 4);
     }
 }
