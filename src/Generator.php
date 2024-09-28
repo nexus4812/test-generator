@@ -2,6 +2,7 @@
 
 namespace Nexus4812\TestGenerator;
 
+use Nexus4812\TestGenerator\Client\ConversationHistory;
 use Nexus4812\TestGenerator\Client\GptClient;
 use Nexus4812\TestGenerator\Client\PricingCalculator;
 use Nexus4812\TestGenerator\Executor\PHPUnitExecutor;
@@ -23,7 +24,12 @@ class Generator
     public static function create(string $chatGptToken): self
     {
         return new static(
-            new GptClient(\OpenAI::client($chatGptToken), new PricingCalculator(), new FileLogger(null)),
+            new GptClient(
+                \OpenAI::client($chatGptToken),
+                new PricingCalculator(),
+                new FileLogger(null),
+                new ConversationHistory()
+            ),
             new PHPUnitExecutor(),
             new FileSystem(),
             new PHPLinter(),
@@ -64,9 +70,7 @@ class Generator
 
     private function retryReduceTest(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true
     {
-        $code = $this->fileSystem->getCodeByClass($className);
-        $testCode = $this->fileSystem->getCodeByClass($className . 'Test');
-        $generateTestCode = $this->gptClient->reduceFailedTest($code, $testCode, $errorReport);
+        $generateTestCode = $this->gptClient->reduceFailedTest($errorReport);
         $path = $this->fileSystem->saveTestToFile($generateTestCode, $className);
         $result = $this->unitExecutor->executeTest($path);
         if ($result === true) {
@@ -83,9 +87,7 @@ class Generator
 
     private function retryGenerate(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true
     {
-        $code = $this->fileSystem->getCodeByClass($className);
-        $testCode = $this->fileSystem->getCodeByClass($className . 'Test');
-        $generateTestCode = $this->gptClient->regenerateTest($code, $testCode, $errorReport);
+        $generateTestCode = $this->gptClient->regenerateTest($errorReport);
         $path = $this->fileSystem->saveTestToFile($generateTestCode, $className);
         $result = $this->unitExecutor->executeTest($path);
         if ($result === true) {
