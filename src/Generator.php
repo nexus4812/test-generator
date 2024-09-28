@@ -2,13 +2,17 @@
 
 namespace Nexus4812\TestGenerator;
 
+use Dotenv\Dotenv;
 use Nexus4812\TestGenerator\Client\ConversationHistory;
 use Nexus4812\TestGenerator\Client\GptClient;
 use Nexus4812\TestGenerator\Client\PricingCalculator;
 use Nexus4812\TestGenerator\Executor\PHPUnitExecutor;
+use Nexus4812\TestGenerator\FileSystem\ClassExtractor;
 use Nexus4812\TestGenerator\FileSystem\FileLogger;
 use Nexus4812\TestGenerator\FileSystem\FileSystem;
+use Nexus4812\TestGenerator\FileSystem\Path;
 use Nexus4812\TestGenerator\Linter\PHPLinter;
+use Symfony\Component\Finder\Finder;
 
 class Generator
 {
@@ -21,8 +25,13 @@ class Generator
     {
     }
 
-    public static function create(string $chatGptToken): self
+    public static function create(string|null $chatGptToken = null): self
     {
+        if (is_null($chatGptToken)) {
+            Dotenv::createImmutable(Path::getProjectRootPath())->load();
+            $chatGptToken = $_ENV['CHAT_GPT_TOKEN'];
+        }
+
         return new static(
             new GptClient(
                 \OpenAI::client($chatGptToken),
@@ -34,6 +43,18 @@ class Generator
             new FileSystem(),
             new PHPLinter(),
         );
+    }
+
+    public function generateByFinder(Finder $finder): void
+    {
+        $this->generateMultiple((new ClassExtractor())->getAllClassesFromDirectory($finder));
+    }
+
+    public function generateMultiple(array $classNames): void
+    {
+        foreach ($classNames as $className) {
+            $this->generate($className);
+        }
     }
 
     public function generate(
@@ -66,6 +87,8 @@ class Generator
             var_dump("execute reduce failed test");
             $this->retryReduceTest($result, $className, 2);
         }
+
+        $this->gptClient->resetTalk();
     }
 
     private function retryReduceTest(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true

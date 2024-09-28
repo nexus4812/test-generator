@@ -8,54 +8,50 @@ class ConversationHistoryTest extends TestCase
 {
     public function testAddMessage()
     {
-        $conversationHistory = new ConversationHistory();
-        $message = ['text' => 'Hello, world!'];
-        
-        $conversationHistory->addMessage($message);
-        
-        $this->assertCount(1, $conversationHistory->getMessages());
-        $this->assertSame([$message], $conversationHistory->getMessages());
+        $history = new ConversationHistory();
+        $this->assertEmpty($history->getMessages());
+
+        $message = ['type' => 'user', 'text' => 'Hello there!'];
+        $history->addMessage($message);
+        $this->assertCount(1, $history->getMessages());
+        $this->assertEquals([$message], $history->getMessages());
     }
-    
+
     public function testGetMessagesInitiallyEmpty()
     {
-        $conversationHistory = new ConversationHistory();
-        $this->assertEmpty($conversationHistory->getMessages());
+        $history = new ConversationHistory();
+        $this->assertEmpty($history->getMessages());
     }
-    
-    public function testInitializeWithSystemMessageWhenEmpty()
+
+    public function testInitializeWithSystemMessageAddsMessageIfEmpty()
     {
-        $conversationHistory = new ConversationHistory();
-        $systemMessage = ['text' => 'System initialization message'];
-        
-        $conversationHistory->initializeWithSystemMessage($systemMessage);
-        
-        $this->assertCount(1, $conversationHistory->getMessages());
-        $this->assertSame([$systemMessage], $conversationHistory->getMessages());
+        $history = new ConversationHistory();
+        $systemMessage = ['type' => 'system', 'text' => 'Welcome!'];
+
+        $history->initializeWithSystemMessage($systemMessage);
+        $this->assertEquals([$systemMessage], $history->getMessages());
     }
-    
-    public function testInitializeWithSystemMessageWhenNotEmpty()
+
+    public function testInitializeWithSystemMessageDoesNotAddIfNotEmpty()
     {
-        $conversationHistory = new ConversationHistory();
-        $firstMessage = ['text' => 'First message'];
-        $systemMessage = ['text' => 'System initialization message'];
-        
-        $conversationHistory->addMessage($firstMessage);
-        $conversationHistory->initializeWithSystemMessage($systemMessage);
-        
-        $this->assertCount(1, $conversationHistory->getMessages());
-        $this->assertSame([$firstMessage], $conversationHistory->getMessages());
-        $this->assertNotContains($systemMessage, $conversationHistory->getMessages());
+        $history = new ConversationHistory();
+        $firstMessage = ['type' => 'user', 'text' => 'Hi!'];
+        $systemMessage = ['type' => 'system', 'text' => 'Welcome!'];
+
+        $history->addMessage($firstMessage);
+        $history->initializeWithSystemMessage($systemMessage);
+
+        $this->assertEquals([$firstMessage], $history->getMessages());
     }
-    
-    public function testReset()
+
+    public function testResetClearsMessages()
     {
-        $conversationHistory = new ConversationHistory();
-        $message = ['text' => 'Hello, world!'];
-        
-        $conversationHistory->addMessage($message);
-        $conversationHistory->reset();
-        
-        $this->assertEmpty($conversationHistory->getMessages());
+        $history = new ConversationHistory();
+        $history->addMessage(['type' => 'user', 'text' => 'Hello there!']);
+
+        $this->assertCount(1, $history->getMessages());
+
+        $history->reset();
+        $this->assertEmpty($history->getMessages());
     }
 }

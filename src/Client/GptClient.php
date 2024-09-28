@@ -83,4 +83,9 @@ readonly class GptClient
 
         return $responseContent;
     }
+
+    public function resetTalk(): void
+    {
+        $this->conversationHistory->reset();
+    }
 }
