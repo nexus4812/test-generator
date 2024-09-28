@@ -11,7 +11,7 @@ class FileLogger
     public function __construct(string|null $logFile)
     {
         $this->logFile = is_null($logFile) ?
-            Path::getProjectRootPath() . '/log/'. (new Datetime())->format('Y-m-d H:i:s') .'-log.txt' :
+            Path::getProjectRootPath() . '/log/'. (new Datetime())->format('Y-m-d-H:i:s') .'-log.txt' :
             $logFile;
     }
 

@@ -13,7 +13,6 @@ class ConversationHistory
 
     public function getMessages(): array
     {
-        var_export($this->messages);
         return $this->messages;
     }
 
