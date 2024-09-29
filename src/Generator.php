@@ -12,6 +12,9 @@ use Nexus4812\TestGenerator\FileSystem\FileLogger;
 use Nexus4812\TestGenerator\FileSystem\FileSystem;
 use Nexus4812\TestGenerator\FileSystem\Path;
 use Nexus4812\TestGenerator\Linter\PHPLinter;
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Finder\Finder;
 
 class Generator
@@ -21,6 +24,7 @@ class Generator
         private readonly PHPUnitExecutor $unitExecutor,
         private readonly FileSystem $fileSystem,
         private readonly PHPLinter $linter,
+        private readonly ConsoleOutputInterface $output
     )
     {
     }
@@ -42,6 +46,7 @@ class Generator
             new PHPUnitExecutor(),
             new FileSystem(),
             new PHPLinter(),
+            new ConsoleOutput()
         );
     }
 
@@ -52,77 +57,80 @@ class Generator
 
     public function generateMultiple(array $classNames): void
     {
+        $progress = new ProgressBar($this->output, );
+        $progress->start(count($classNames));
         foreach ($classNames as $className) {
             $this->generate($className);
+            $progress->advance();
         }
+
+        $progress->finish();
     }
 
     public function generate(
         string $className
     ): void
     {
+        // phpのチェック
+        $this->output->writeln("Create a unit test for class " . $className);
         $code = $this->fileSystem->getCodeByClass($className);
+        $this->linter->lintPHPCodeOrFail($code);
 
-        // php -lのオプションを利用して、PHPの文法エラーになっていないか検証する
-        if (!$this->linter->lintPHPCode($code)) {
-            throw new \InvalidArgumentException($className . ' is broken code');
-        }
-
+        // テストコードの生成とPHPの構文チェック
         $testCode = $this->gptClient->generateTest($code);
-
-        if (!$this->linter->lintPHPCode($testCode)) {
-            throw new \RuntimeException("Test code is broken that chat gpt generated >> " . $testCode);
-        }
+        $this->linter->lintPHPCodeOrFail($testCode);
 
         // ファイルをtests配下に保存して、PHPUnitを実行する
         $path = $this->fileSystem->saveTestToFile($testCode, $className);
         $result = $this->unitExecutor->executeTest($path);
 
         if (is_string($result)) {
-            var_dump("execute retry");
-            $this->retryGenerate($result, $className, 2);
+            $result = $this->retryGenerate($result, $className, 2);
         }
 
         if (is_string($result)) {
-            var_dump("execute reduce failed test");
             $this->retryReduceTest($result, $className, 2);
         }
 
         $this->gptClient->resetTalk();
+        $this->output->writeln("Complete: Created a unit test for class " . $className);
     }
 
-    private function retryReduceTest(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true
+    private function retryReduceTest(string $errorReport, string $className, int $numOfRetry = 1): string|true
     {
+        if (0 >= $numOfRetry) {
+            $this->output->writeln("Reduce failed unit test was failed");
+            return $errorReport;
+        }
+        $this->output->writeln("Reduce failed unit test");
+
         $generateTestCode = $this->gptClient->reduceFailedTest($errorReport);
         $path = $this->fileSystem->saveTestToFile($generateTestCode, $className);
         $result = $this->unitExecutor->executeTest($path);
         if ($result === true) {
-            var_dump("reduce retry is success");
+            $this->output->writeln("Reduce failed unit test was success");
             return true;
         }
 
-        if (0 >= $numOfMaxRetry) {
-            return $result;
-        }
-
-        return $this->retryReduceTest($result, $className, $numOfMaxRetry - 1);
+        return $this->retryReduceTest($result, $className, $numOfRetry - 1);
     }
 
-    private function retryGenerate(string $errorReport, string $className, int $numOfMaxRetry = 0): string|true
+    private function retryGenerate(string $errorReport, string $className, int $numOfRetry = 1): string|true
     {
+        if (0 >= $numOfRetry) {
+            $this->output->writeln("Regenerate failed unit test was failed");
+            return $errorReport;
+        }
+
         $generateTestCode = $this->gptClient->regenerateTest($errorReport);
         $path = $this->fileSystem->saveTestToFile($generateTestCode, $className);
         $result = $this->unitExecutor->executeTest($path);
         if ($result === true) {
-            var_dump("retry is success");
+            $this->output->writeln("Regenerate unit test was success");
             return true;
         }
 
-        if (0 >= $numOfMaxRetry) {
-            return $result;
-        }
-
-        return $this->retryGenerate($result, $className, $numOfMaxRetry - 1);
+        return $this->retryGenerate($result, $className, $numOfRetry - 1);
     }
 }
 

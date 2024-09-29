@@ -3,11 +3,12 @@
 namespace Nexus4812\TestGenerator\Client;
 
 use Nexus4812\TestGenerator\FileSystem\FileLogger;
+use Nexus4812\TestGenerator\Linter\PHPLinter;
 use OpenAI\Client;
 
 readonly class GptClient
 {
-    private const MODEL = 'gpt-4-turbo';
+    private const MODEL = 'gpt-3.5-turbo';
 
     private const SYSTEM_MESSAGE = [
         'role' => 'system',
@@ -25,7 +26,7 @@ readonly class GptClient
         private Client            $client,
         private PricingCalculator $pricingCalculator,
         private FileLogger        $logger,
-        private ConversationHistory $conversationHistory,
+        private ConversationHistory $conversationHistory
     )
     {
     }

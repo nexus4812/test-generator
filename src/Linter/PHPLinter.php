@@ -18,4 +18,11 @@ class PHPLinter
 
         return str_contains($output, 'No syntax errors');
     }
+
+    public function lintPHPCodeOrFail(string $code): void
+    {
+        if (!$this->lintPHPCode($code)) {
+            throw new \RuntimeException("This code is broken " . $code);
+        }
+    }
 }
